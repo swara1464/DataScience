@@ -1,0 +1,164 @@
+STEP 0: CHECK AND CLEAN EXISTING JENKINS INSTALLATION
+Check Jenkins service:
+systemctl status jenkins
+
+If Jenkins is already running and opens in browser, skip deletion.
+If Jenkins is broken or not opening, remove it.
+
+Remove Jenkins (only if required):
+sudo systemctl stop jenkins
+sudo apt remove --purge jenkins -y
+sudo apt autoremove -y
+
+
+STEP 1: CHECK AND INSTALL JAVA (REQUIRED FOR JENKINS)
+Check Java:
+java -version
+If Java is missing or broken:
+sudo apt update
+sudo apt install openjdk-11-jdk -y
+java -version
+
+Expected output (version may vary):
+openjdk version "11.x.x"
+
+
+STEP 2: INSTALL JENKINS
+Add Jenkins key and repository:
+curl -fsSL https://pkg.jenkins.io/debian/jenkins.io.key | sudo tee \
+/usr/share/keyrings/jenkins-keyring.asc > /dev/null
+
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+https://pkg.jenkins.io/debian binary/ | sudo tee \
+/etc/apt/sources.list.d/jenkins.list > /dev/null
+
+
+Install Jenkins:
+sudo apt update
+sudo apt install jenkins -y
+
+Start Jenkins:
+sudo systemctl start jenkins
+sudo systemctl status jenkins
+
+
+STEP 3: ACCESS JENKINS AND LOGIN (BROWSER STEP)
+
+Get initial admin password:
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Open browser and go to:
+http://localhost:8080
+
+Browser actions:
+Paste admin password
+Click Install Suggested Plugins
+Create admin user or continue as admin
+Finish setup
+
+
+STEP 4: CREATE STUDENT PORTAL WEBSITE LOCALLY
+Create project directory:
+mkdir student-portal
+cd student-portal
+
+Create HTML file:
+nano index.html
+Paste the following content exactly:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Portal</title>
+</head>
+<body>
+    <h1>College Student Portal</h1>
+    <p>Welcome to the student portal website.</p>
+</body>
+</html>
+
+Save and exit:
+CTRL + O → Enter
+CTRL + X
+
+
+STEP 5: INITIALIZE GIT REPOSITORY AND PUSH TO GITHUB
+
+Initialize Git:
+git init
+git branch -M main
+
+
+Add files and commit:
+git add .
+git commit -m "Initial student portal website"
+
+
+Add remote repository (must be pre-created on GitHub):
+git remote add origin https://github.com/YOUR_USERNAME/student-portal.git
+git push -u origin main
+
+
+STEP 6: CREATE JENKINS FREESTYLE JOB (BROWSER STEP)
+In Jenkins Dashboard:
+Click New Item
+
+Enter job name: student-portal-ci
+
+Select Freestyle project
+
+Click OK
+
+Configure job:
+Source Code Management → Git
+
+Repository URL:
+https://github.com/YOUR_USERNAME/student-portal.git
+
+Branch:
+*/main
+
+
+Build Triggers:
+Enable GitHub hook trigger for GITScm polling
+Build:
+Add Build Step → Execute Shell
+echo "Build triggered successfully"
+
+Click Save
+
+
+STEP 7: VERIFY INITIAL BUILD
+
+In Jenkins:
+Click Build Now
+Open Console Output
+Expected output:
+Build triggered successfully
+
+
+STEP 8: MODIFY HTML FILE TO TRIGGER CI
+
+Edit HTML file:
+nano index.html
+
+Modify heading to:
+<h1>College Student Portal Website</h1>
+
+Save and exit.
+Commit and push changes:
+
+git add .
+git commit -m "Updated homepage heading"
+git push
+
+
+STEP 9: VERIFY AUTOMATIC BUILD TRIGGER
+
+In Jenkins Dashboard:
+A new build should start automatically
+
+Open latest build → Console Output
+
+Expected output:
+Started by GitHub push
+Build triggered successfully
