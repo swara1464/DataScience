@@ -1,0 +1,158 @@
+STEP 0: CHECK AND CLEAN EXISTING DOCKER INSTALLATION
+Check Docker:
+docker --version
+
+
+Check Docker service:
+systemctl status docker
+
+
+If Docker is broken or not working, remove it.
+Remove Docker (only if required):
+sudo systemctl stop docker
+sudo apt remove --purge docker docker.io docker-compose -y
+sudo apt autoremove -y
+
+
+STEP 1: INSTALL DOCKER
+Update system:
+sudo apt update
+
+Install Docker:
+sudo apt install docker.io -y
+
+
+Start Docker service:
+sudo systemctl start docker
+sudo systemctl enable docker
+
+
+Verify Docker:
+docker --version
+
+Expected output (version may vary):
+Docker version 20.xx.x
+
+
+STEP 2: FIX PERMISSION ISSUE (VERY IMPORTANT)
+Add current user to Docker group:
+sudo usermod -aG docker $USER
+
+Apply group change immediately:
+newgrp docker
+
+
+Verify without sudo:
+docker ps
+
+
+Expected output:
+CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS   PORTS   NAMES
+
+(empty list is fine)
+
+
+STEP 3: CREATE SIMPLE WEB APPLICATION
+
+Create project directory:
+mkdir docker-webapp
+cd docker-webapp
+
+
+Create HTML file:
+nano index.html
+
+Paste the following content:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Web App</title>
+</head>
+<body>
+    <h1>Hello from Docker Container</h1>
+</body>
+</html>
+
+
+Save and exit:
+CTRL + O → Enter
+CTRL + X
+
+
+STEP 4: CREATE DOCKERFILE
+Create Dockerfile:
+nano Dockerfile
+
+Paste the following content exactly:
+FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/
+
+Save and exit.
+
+
+STEP 5: BUILD DOCKER IMAGE
+
+Build Docker image:
+docker build -t docker-webapp .
+
+Expected output:
+Successfully built <image_id>
+Successfully tagged docker-webapp:latest
+
+
+STEP 6: RUN DOCKER CONTAINER
+
+Run container with port mapping:
+docker run -d -p 8081:80 docker-webapp
+
+
+Verify running container:
+docker ps
+
+
+Expected output shows:
+Image: docker-webapp
+Port: 0.0.0.0:8081->80/tcp
+
+
+STEP 7: VERIFY APPLICATION IN BROWSER
+
+Open browser and go to:
+http://localhost:8081
+
+
+Expected output:
+Hello from Docker Container
+
+
+Show this to examiner.
+
+
+STEP 8: DOCKER COMMANDS AS REQUIRED IN QUESTION
+
+List running containers:
+docker ps
+
+List all containers:
+docker ps -a
+
+List images:
+docker images
+
+
+Stop running container:
+docker stop <container_id>
+
+
+Remove container:
+docker rm <container_id>
+
+
+Remove image:
+docker rmi docker-webapp
+
+
+STEP 9: FINAL VERIFICATION (OPTIONAL)
+
+Check Docker service:
+systemctl status docker
