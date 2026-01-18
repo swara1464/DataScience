@@ -1,0 +1,96 @@
+STEP 0: CHECK EXISTING GIT INSTALLATION
+git --version
+
+Remove broken or existing Git (only if required)
+sudo apt remove --purge git -y
+sudo apt autoremove -y
+
+STEP 1: INSTALL / REINSTALL GIT
+sudo apt update
+sudo apt install git -y
+git --version
+
+Expected output (version may vary):
+git version 2.xx.x
+
+STEP 2: CONFIGURE GIT USER DETAILS (REQUIRED FOR COMMITS)
+git config --global user.name "Your Name"
+git config --global user.email "your_email@gmail.com"
+
+Verify configuration:
+git config --list
+
+STEP 3: CREATE PROJECT DIRECTORY
+mkdir user-registration-form
+cd user-registration-form
+
+STEP 4: CREATE HTML REGISTRATION FORM
+nano index.html
+Paste the following content exactly:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event Registration</title>
+</head>
+<body>
+    <h2>User Registration Form</h2>
+    <form>
+        Name: <input type="text"><br><br>
+        Email: <input type="email"><br><br>
+        Phone: <input type="text"><br><br>
+        <button type="submit">Register</button>
+    </form>
+</body>
+</html>
+
+
+Save and exit:
+CTRL + O → Enter
+CTRL + X
+
+STEP 5: INITIALIZE GIT REPOSITORY
+git init
+git status
+
+Expected output:
+On branch master (or main)
+Untracked files:
+  index.html
+
+STEP 6: ADD AND COMMIT FILES
+git add .
+git commit -m "Initial user registration form"
+
+STEP 7: CREATE NEW BRANCH
+git branch update-form
+git branch
+
+Expected output:
+* main
+  update-form
+
+STEP 8: SWITCH TO NEW BRANCH
+git checkout update-form
+
+STEP 9: MODIFY FORM (ADD DEPARTMENT FIELD)
+nano index.html
+Add the following line between Phone and Button:
+Department: <input type="text"><br><br>
+Save and exit.
+
+STEP 10: COMMIT CHANGES IN UPDATE BRANCH
+git add .
+git commit -m "Added department field to registration form"
+
+STEP 11: MERGE UPDATE BRANCH INTO MAIN
+git checkout main
+git merge update-form
+
+Expected output:
+Merge made by the 'recursive' strategy
+
+STEP 12: PUSH PROJECT TO GITHUB
+Note: GitHub repository must already be created.
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git push -u origin main
