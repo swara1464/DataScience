@@ -1,0 +1,116 @@
+STEP 0: CHECK AND CLEAN EXISTING PACKAGES
+Check Python:
+python3 --version
+
+Check pip:
+pip3 --version
+
+Check ONNX:
+python3 -c "import onnx"
+
+Check ONNX Runtime:
+python3 -c "import onnxruntime"
+
+If errors occur, remove existing packages:
+pip3 uninstall onnx onnxruntime skl2onnx -y
+
+
+STEP 1: INSTALL REQUIRED PACKAGES
+Update system:
+sudo apt update
+
+Install Python tools:
+sudo apt install python3 python3-pip -y
+
+Install required ML packages:
+pip3 install scikit-learn pandas onnx onnxruntime skl2onnx
+
+Verify installation:
+python3 -c "import onnx, onnxruntime, sklearn"
+
+
+STEP 2: CREATE PROJECT DIRECTORY
+mkdir onnx-project
+cd onnx-project
+
+Initialize Git:
+git init
+git branch -M main
+
+
+STEP 3: CREATE TRAINING AND EXPORT SCRIPT
+Create file:
+nano train_and_export.py
+
+Paste exactly:
+import time
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
+import onnxruntime as rt
+
+# Create dataset
+X = np.array([[1], [2], [3], [4], [5]], dtype=np.float32)
+y = np.array([2, 4, 6, 8, 10], dtype=np.float32)
+
+# Train sklearn model
+model = LinearRegression()
+model.fit(X, y)
+
+# Benchmark sklearn inference
+start = time.time()
+sk_pred = model.predict(X)
+sk_time = time.time() - start
+
+# Export model to ONNX
+initial_type = [('float_input', FloatTensorType([None, 1]))]
+onnx_model = convert_sklearn(model, initial_types=initial_type)
+
+with open("model.onnx", "wb") as f:
+    f.write(onnx_model.SerializeToString())
+
+# Load ONNX model
+sess = rt.InferenceSession("model.onnx")
+input_name = sess.get_inputs()[0].name
+
+# Benchmark ONNX inference
+start = time.time()
+onnx_pred = sess.run(None, {input_name: X})[0]
+onnx_time = time.time() - start
+
+print("Sklearn predictions:", sk_pred)
+print("ONNX predictions:", onnx_pred.flatten())
+print("Sklearn inference time:", sk_time)
+print("ONNX inference time:", onnx_time)
+
+
+Save and exit.
+
+STEP 4: RUN SCRIPT
+python3 train_and_export.py
+
+Expected output (example):
+Sklearn predictions: [ 2.  4.  6.  8. 10.]
+ONNX predictions: [ 2.  4.  6.  8. 10.]
+Sklearn inference time: 0.00012
+ONNX inference time: 0.00003
+
+This proves:
+Same predictions
+
+Faster ONNX inference
+
+
+STEP 5: VERIFY GENERATED FILES
+ls
+
+Expected:
+model.onnx
+train_and_export.py
+
+
+STEP 6: COMMIT FILES
+git add train_and_export.py model.onnx
+git commit -m "Export sklearn model to ONNX and benchmark inference"
