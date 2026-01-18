@@ -1,0 +1,155 @@
+STEP 0: CHECK AND CLEAN EXISTING DOCKER / DOCKER COMPOSE
+Check Docker:
+docker --version
+
+Check Docker Compose:
+docker-compose --version
+
+If Docker or Compose is broken, remove them.
+Remove Docker (only if required):
+sudo systemctl stop docker
+sudo apt remove --purge docker docker.io docker-compose -y
+sudo apt autoremove -y
+
+
+STEP 1: INSTALL DOCKER AND DOCKER COMPOSE
+Update system:
+sudo apt update
+
+Install Docker:
+sudo apt install docker.io -y
+
+Start Docker:
+sudo systemctl start docker
+sudo systemctl enable docker
+
+Install Docker Compose:
+sudo apt install docker-compose -y
+
+Verify:
+docker --version
+docker-compose --version
+
+
+STEP 2: FIX DOCKER PERMISSIONS
+Add user to Docker group:
+sudo usermod -aG docker $USER
+
+Apply immediately:
+newgrp docker
+
+Verify:
+docker ps
+
+
+STEP 3: CREATE PROJECT DIRECTORY
+mkdir docker-compose-app
+cd docker-compose-app
+
+
+STEP 4: CREATE SIMPLE APPLICATION (PYTHON + REDIS)
+Create app file:
+nano app.py
+
+Paste exactly:
+import redis
+import time
+
+r = redis.Redis(host='redis', port=6379)
+
+while True:
+    try:
+        r.set('message', 'Hello from Redis via Docker Compose')
+        print(r.get('message').decode())
+        time.sleep(5)
+    except redis.exceptions.ConnectionError:
+        print("Waiting for Redis...")
+        time.sleep(5)
+
+
+STEP 5: CREATE REQUIREMENTS FILE
+nano requirements.txt
+
+Paste:
+redis
+
+Save and exit.
+
+
+STEP 6: CREATE DOCKERFILE FOR APP SERVICE
+nano Dockerfile
+
+Paste exactly:
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY app.py .
+CMD ["python", "app.py"]
+
+Save and exit.
+
+
+STEP 7: CREATE DOCKER COMPOSE FILE
+nano docker-compose.yml
+Paste exactly (indentation matters):
+version: '3'
+services:
+  app:
+    build: .
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  redis-data:
+
+Save and exit.
+
+
+STEP 8: START MULTI-CONTAINER APPLICATION
+Build and start containers:
+docker-compose up -d
+
+Verify running containers:
+docker-compose ps
+
+
+STEP 9: VERIFY INTER-CONTAINER COMMUNICATION
+Check logs of app container:
+docker-compose logs app
+
+Expected output (repeating):
+Hello from Redis via Docker Compose
+
+This proves:
+App container talks to Redis container
+
+Service dependency works
+Network works
+
+STEP 10: SHOW IMPORTANT COMMANDS TO EXAMINER
+
+docker-compose ps
+docker-compose logs
+docker-compose down
+
+
+STEP 11: STOP AND CLEAN UP (OPTIONAL)
+
+Stop containers:
+docker-compose down
+
+Remove volumes (optional):
+docker volume rm docker-compose-app_redis-data
