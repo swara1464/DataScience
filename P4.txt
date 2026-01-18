@@ -1,0 +1,205 @@
+STEP 0: CHECK AND CLEAN EXISTING KUBERNETES SETUP
+
+Check kubectl:
+kubectl version --client
+
+Check minikube:
+minikube version
+
+If cluster exists but is unstable, reset it.
+Reset minikube (only if required):
+minikube stop
+minikube delete
+
+Remove kubectl (only if required):
+sudo snap remove kubectl
+
+
+STEP 1: INSTALL KUBECTL
+sudo snap install kubectl --classic
+kubectl version --client
+
+Expected output (version may vary):
+Client Version: v1.xx.x
+
+
+STEP 2: INSTALL AND START MINIKUBE
+sudo snap install minikube
+minikube start
+
+Verify node:
+kubectl get nodes
+
+Expected output:
+minikube   Ready
+
+
+STEP 3: BUILD DOCKER IMAGE INSIDE MINIKUBE
+Configure shell to use minikube Docker:
+eval $(minikube docker-env)
+
+Create project directory:
+mkdir student-portal-k8s
+cd student-portal-k8s
+
+Create HTML file:
+nano index.html
+
+Paste:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Portal</title>
+</head>
+<body>
+    <h1>Hello from Kubernetes</h1>
+</body>
+</html>
+
+Save and exit.
+
+Create Dockerfile:
+nano Dockerfile
+
+Paste:
+FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/
+
+Save and exit.
+
+Build image:
+docker build -t student-portal .
+
+Verify image:
+docker images
+
+
+STEP 4: CREATE KUBERNETES DEPLOYMENT YAML
+
+Create deployment file:
+nano deployment.yaml
+
+
+Paste exactly (indentation matters):
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-portal-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: student-portal
+  template:
+    metadata:
+      labels:
+        app: student-portal
+    spec:
+      containers:
+      - name: student-portal
+        image: student-portal
+        ports:
+        - containerPort: 80
+
+
+Apply deployment:
+kubectl apply -f deployment.yaml
+
+Verify pod:
+kubectl get pods
+
+Expected output:
+student-portal-deploy-xxxxx   1/1   Running
+
+
+STEP 5: CREATE NODEPORT SERVICE YAML
+
+Create service file:
+nano service-nodeport.yaml
+
+Paste exactly:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-portal-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: student-portal
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+
+Apply service:
+kubectl apply -f service-nodeport.yaml
+
+Verify service:
+kubectl get svc student-portal-nodeport
+
+Expected output (example):
+NAME                       TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+student-portal-nodeport    NodePort   10.96.x.x       <none>        80:3xxxx/TCP   10s
+
+
+STEP 6: FIND NODE IP AND ACCESS APPLICATION
+
+Get Minikube IP:
+minikube ip
+
+Example output:
+192.168.49.2
+
+Get NodePort:
+kubectl get svc student-portal-nodeport
+
+Access application in browser or curl:
+http://192.168.49.2:<NODEPORT>
+
+Example output:
+NAME                       TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+student-portal-nodeport    NodePort   10.96.0.12      <none>        80:30080/TCP   10s
+Look carefully at:
+80:30080/TCP
+
+This means:
+80 → internal service port
+30080 → NodePort (THIS is what you need)
+So:
+NODEPORT = 30080
+STEP 6C: COMBINE BOTH (THIS IS THE URL)
+
+Now combine:
+Node IP → 192.168.49.2
+NodePort → 30080
+
+Final URL:
+http://192.168.49.2:30080
+
+HOW TO ACCESS (TWO SAFE OPTIONS)
+OPTION 1: Browser (preferred in exam)
+Open browser and paste:
+http://192.168.49.2:30080
+Expected output:
+Hello from Kubernetes
+
+
+STEP 7: SCALE DEPLOYMENT TO 3 REPLICAS
+
+kubectl scale deployment student-portal-deploy --replicas=3
+
+Verify:
+kubectl get pods -l app=student-portal
+
+Expected output:
+3 pods in Running state
+
+
+STEP 8: IMPORTANT COMMANDS TO SHOW EXAMINER
+
+kubectl get pods
+kubectl get deployments
+kubectl get services
+kubectl scale deployment student-portal-deploy --replicas=3
