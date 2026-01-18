@@ -1,0 +1,194 @@
+STEP 0: CHECK AND CLEAN EXISTING INSTALLATIONS
+Check Python:
+python3 --version
+
+Check pip:
+pip3 --version
+
+Check FastAPI:
+python3 -c "import fastapi"
+
+If FastAPI or dependencies are broken:
+pip3 uninstall fastapi uvicorn scikit-learn pydantic -y
+
+Check Docker:
+docker --version
+
+If Docker is broken (only if required):
+sudo apt remove --purge docker docker.io -y
+sudo apt autoremove -y
+
+
+STEP 1: INSTALL REQUIRED TOOLS
+Update system:
+sudo apt update
+
+Install Python tools:
+sudo apt install python3 python3-pip -y
+
+Install FastAPI and ML packages:
+pip3 install fastapi uvicorn scikit-learn pydantic pytest
+
+Verify:
+python3 -c "import fastapi, uvicorn, sklearn"
+
+
+STEP 2: CREATE PROJECT DIRECTORY
+mkdir fastapi-ml-app
+cd fastapi-ml-app
+
+Initialize Git:
+git init
+git branch -M main
+
+
+STEP 3: CREATE ML MODEL FILE
+nano model.py
+
+Paste exactly:
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+X = np.array([[1], [2], [3], [4], [5]])
+y = np.array([2, 4, 6, 8, 10])
+
+model = LinearRegression()
+model.fit(X, y)
+
+def predict(value: float):
+    return model.predict([[value]])[0]
+
+
+Save and exit.
+
+
+STEP 4: CREATE FASTAPI APPLICATION
+nano app.py
+
+Paste exactly:
+from fastapi import FastAPI
+from pydantic import BaseModel
+from model import predict
+
+app = FastAPI()
+
+class InputData(BaseModel):
+    value: float
+
+@app.get("/")
+def read_root():
+    return {"message": "ML Model API is running"}
+
+@app.post("/predict")
+def predict_output(data: InputData):
+    result = predict(data.value)
+    return {"prediction": result}
+
+
+Save and exit.
+
+
+STEP 5: RUN FASTAPI LOCALLY
+uvicorn app:app --host 0.0.0.0 --port 8000
+
+Verify in another terminal:
+curl http://127.0.0.1:8000
+
+Expected output:
+{"message":"ML Model API is running"}
+
+Test prediction:
+curl -X POST "http://127.0.0.1:8000/predict" \
+-H "Content-Type: application/json" \
+-d '{"value": 6}'
+
+Expected output:
+{"prediction":12.0}
+
+Stop server:
+CTRL + C
+
+
+STEP 6: WRITE TEST CASES
+Create test directory:
+mkdir tests
+
+Create test file:
+nano tests/test_app.py
+
+Paste exactly:
+from fastapi.testclient import TestClient
+from app import app
+
+client = TestClient(app)
+
+def test_root():
+    response = client.get("/")
+    assert response.status_code == 200
+
+def test_predict():
+    response = client.post("/predict", json={"value": 5})
+    assert response.status_code == 200
+    assert response.json()["prediction"] == 10.0
+
+Run tests:
+pytest
+
+Expected:
+2 passed
+
+
+STEP 7: CREATE REQUIREMENTS FILE
+nano requirements.txt
+
+Paste:
+fastapi
+uvicorn
+scikit-learn
+pydantic
+
+Save and exit.
+
+
+STEP 8: CREATE DOCKERFILE
+nano Dockerfile
+
+Paste exactly:
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+Save and exit.
+
+
+STEP 9: BUILD AND RUN DOCKER CONTAINER
+Build image:
+docker build -t fastapi-ml .
+
+Run container:
+docker run -d -p 8000:8000 fastapi-ml
+
+Verify container:
+docker ps
+
+
+STEP 10: VERIFY PREDICTION USING CURL
+curl http://127.0.0.1:8000
+curl -X POST "http://127.0.0.1:8000/predict" \
+-H "Content-Type: application/json" \
+-d '{"value": 7}'
+
+Expected:
+{"prediction":14.0}
+
+
+STEP 11: STOP AND CLEAN CONTAINER
+docker stop $(docker ps -q)
+
+
+STEP 12: COMMIT PROJECT FILES
+git add .
+git commit -m "Serve ML model using FastAPI with Docker"
