@@ -1,0 +1,135 @@
+STEP 0: CHECK AND CLEAN EXISTING PYTHON SETUP
+Check Python:
+python3 --version
+
+Check pip:
+pip3 --version
+
+If Python or pip is missing or broken, reinstall.
+Remove broken Python packages (only if required):
+sudo apt remove --purge python3 python3-pip -y
+sudo apt autoremove -y
+
+
+STEP 1: INSTALL PYTHON AND PIP
+Update system:
+sudo apt update
+
+Install Python and pip:
+sudo apt install python3 python3-pip python3-venv -y
+
+Verify installation:
+python3 --version
+pip3 --version
+
+Expected output (version may vary):
+Python 3.x.x
+pip x.x
+
+
+STEP 2: CREATE PROJECT DIRECTORY
+mkdir ml-project
+cd ml-project
+
+
+STEP 3: CREATE VIRTUAL ENVIRONMENT (VERY IMPORTANT)
+Create virtual environment:
+python3 -m venv venv
+
+Activate virtual environment:
+source venv/bin/activate
+
+Verify activation:
+which python
+
+Expected output:
+.../ml-project/venv/bin/python
+
+
+STEP 4: CREATE requirements.txt FILE
+nano requirements.txt
+
+Paste the following content exactly:
+numpy
+pandas
+scikit-learn
+matplotlib
+jupyter
+
+Save and exit.
+
+
+STEP 5: INSTALL PACKAGES FROM requirements.txt
+Upgrade pip (prevents errors)
+pip install --upgrade pip
+
+Install packages:
+pip install -r requirements.txt
+
+Verify installation:
+pip list
+
+
+STEP 6: LAUNCH JUPYTER NOTEBOOK
+Start Jupyter:
+jupyter notebook
+
+Expected:
+Browser opens automatically
+OR
+Terminal shows a URL like:
+http://localhost:8888/?token=...
+
+Open that URL in browser if needed.
+
+STEP 7: CREATE AND DOCUMENT NOTEBOOK
+In browser:
+Click New → Python 3 Notebook
+Rename notebook to:
+ml_environment_setup.ipynb
+
+In the notebook, add and run the following cells.
+CELL 1: VERIFY PYTHON
+import sys
+print(sys.version)
+
+CELL 2: VERIFY LIBRARIES
+import numpy
+import pandas
+import sklearn
+import matplotlib
+print("All libraries imported successfully")
+
+
+CELL 3: SIMPLE ML CHECK (OPTIONAL BUT IMPRESSIVE)
+from sklearn.datasets import load_iris
+data = load_iris()
+print(data.data.shape)
+
+Save notebook.
+
+
+STEP 8: STOP JUPYTER NOTEBOOK
+In terminal:
+CTRL + C
+y
+
+
+STEP 9: INITIALIZE GIT REPOSITORY
+git init
+git branch -M main
+
+Add files:
+git add requirements.txt ml_environment_setup.ipynb
+git commit -m "Set up ML environment with requirements and Jupyter notebook"
+
+STEP 10: PUSH TO GITHUB
+Add remote repository (must be pre-created):
+git remote add origin https://github.com/YOUR_USERNAME/ml-project.git
+git push -u origin main
+
+
+STEP 11: FINAL VERIFICATION COMMANDS (IF ASKED)
+python3 --version
+pip list
+jupyter notebook
