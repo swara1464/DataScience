@@ -1,0 +1,211 @@
+STEP 0: UPDATE SYSTEM
+sudo apt update
+
+STEP 1: INSTALL DOCKER (REQUIRED)
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+docker --version
+
+
+Add current user to Docker group (important):
+
+sudo usermod -aG docker $USER
+newgrp docker
+
+
+Verify:
+
+docker ps
+
+STEP 2: INSTALL KUBECTL
+sudo snap install kubectl --classic
+kubectl version --client
+
+STEP 3: INSTALL MINIKUBE
+sudo snap install minikube
+minikube version
+
+STEP 4: START MINIKUBE
+minikube start --driver=docker
+
+
+Verify node:
+
+kubectl get nodes
+
+
+Expected:
+
+minikube   Ready
+
+STEP 5: CONFIGURE DOCKER TO USE MINIKUBE
+
+This is CRITICAL. Without this, Kubernetes will not find your image.
+
+eval $(minikube docker-env)
+
+STEP 6: CREATE PROJECT DIRECTORY
+mkdir student-portal-k8s
+cd student-portal-k8s
+
+STEP 7: CREATE HTML FILE
+nano index.html
+
+
+Paste:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Portal</title>
+</head>
+<body>
+    <h1>Hello from Kubernetes</h1>
+</body>
+</html>
+
+
+Save and exit.
+
+STEP 8: CREATE DOCKERFILE
+nano Dockerfile
+
+
+Paste:
+
+FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/index.html
+EXPOSE 80
+
+
+Save and exit.
+
+STEP 9: BUILD DOCKER IMAGE INSIDE MINIKUBE
+docker build -t student-portal .
+docker images
+
+
+You MUST see:
+
+student-portal   latest
+
+STEP 10: CREATE KUBERNETES DEPLOYMENT YAML
+nano deployment.yaml
+
+
+Paste exactly:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-portal-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: student-portal
+  template:
+    metadata:
+      labels:
+        app: student-portal
+    spec:
+      containers:
+      - name: student-portal
+        image: student-portal
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+
+
+Save and exit.
+
+STEP 11: APPLY DEPLOYMENT
+kubectl apply -f deployment.yaml
+
+
+Verify pod:
+
+kubectl get pods
+
+
+Expected:
+
+student-portal-deploy-xxxxx   1/1   Running
+
+STEP 12: CREATE NODEPORT SERVICE YAML
+nano service-nodeport.yaml
+
+
+Paste:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-portal-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: student-portal
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+
+Save and exit.
+
+STEP 13: APPLY SERVICE
+kubectl apply -f service-nodeport.yaml
+
+
+Verify:
+
+kubectl get svc student-portal-nodeport
+
+
+Example output:
+
+80:30080/TCP
+
+STEP 14: FIND NODE IP AND ACCESS APPLICATION
+
+Get Minikube IP:
+
+minikube ip
+
+
+Example:
+
+192.168.49.2
+
+
+Combine:
+
+http://192.168.49.2:30080
+
+
+Open in browser.
+
+Expected output:
+
+Hello from Kubernetes
+
+STEP 15: SCALE DEPLOYMENT TO 3 REPLICAS
+kubectl scale deployment student-portal-deploy --replicas=3
+
+
+Verify:
+
+kubectl get pods -l app=student-portal
+
+
+Expected:
+
+3 pods running
+
+STEP 16: IMPORTANT COMMANDS TO SHOW EXAMINER
+kubectl get pods
+kubectl get deployments
+kubectl get services
+kubectl scale deployment student-portal-deploy --replicas=3
