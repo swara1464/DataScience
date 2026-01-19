@@ -1,0 +1,173 @@
+STEP 0: CHECK AND CLEAN EXISTING DOCKER / COMPOSE
+docker --version
+docker-compose --version
+
+
+If Docker/Compose is broken or misconfigured, remove:
+
+sudo systemctl stop docker
+sudo apt remove --purge docker docker.io docker-compose -y
+sudo apt autoremove -y
+
+STEP 1: INSTALL DOCKER AND DOCKER COMPOSE
+sudo apt update
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+
+sudo apt install docker-compose -y
+
+docker --version
+docker-compose --version
+
+STEP 2: FIX DOCKER PERMISSIONS
+
+Add current user to Docker group (avoid sudo for every command):
+
+sudo usermod -aG docker $USER
+newgrp docker
+docker ps  # Verify works without sudo
+
+STEP 3: CREATE PROJECT DIRECTORY
+mkdir flask-redis-compose
+cd flask-redis-compose
+
+STEP 4: CREATE FLASK APPLICATION (app.py)
+nano app.py
+
+
+Paste this working Flask + Redis code:
+
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+
+# Connect to Redis using service name from docker-compose
+r = redis.Redis(host='redis', port=6379, decode_responses=True)
+
+@app.route("/")
+def home():
+    # Increment visit counter
+    r.incr("visits")
+    return f"Visits: {r.get('visits')}"
+
+if __name__ == "__main__":
+    # Flask listens on all interfaces
+    app.run(host="0.0.0.0", port=5000)
+
+
+Explanation:
+
+redis.Redis(host='redis') → uses docker-compose service name as hostname.
+
+decode_responses=True → automatically converts bytes → string.
+
+Every refresh increases the visit counter in Redis.
+
+STEP 5: CREATE REQUIREMENTS FILE
+nano requirements.txt
+
+flask
+redis
+
+STEP 6: CREATE DOCKERFILE FOR APP
+nano Dockerfile
+
+
+Paste:
+
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy dependencies and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app code
+COPY app.py .
+
+# Expose Flask port
+EXPOSE 5000
+
+# Run Flask app
+CMD ["python", "app.py"]
+
+STEP 7: CREATE DOCKER-COMPOSE FILE
+nano docker-compose.yml
+
+
+Paste working Docker Compose file:
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  redis-data:
+
+
+Explanation:
+
+app → builds from local Dockerfile
+
+redis → official Redis image
+
+depends_on → ensures Redis starts before Flask
+
+volumes → data persists even if container restarts
+
+networks → allows container communication
+
+STEP 8: START MULTI-CONTAINER APP
+docker-compose up -d --build
+
+
+-d → detached mode (run in background)
+
+--build → rebuild images if changed
+
+STEP 9: VERIFY RUNNING CONTAINERS
+docker-compose ps
+
+
+You should see:
+
+Name	Command	State	Ports
+flask-redis-compose_app_1	python app.py	Up	0.0.0.0:5000->5000/tcp
+flask-redis-compose_redis_1	docker-entrypoint.sh redis ...	Up	6379/tcp
+STEP 10: VERIFY APP + REDIS COMMUNICATION
+
+Open browser:
+
+http://localhost:5000
+
+
+First refresh → Visits: 1
+
+Second refresh → Visits: 2
+
+Each refresh increments Redis counter
+
+Check logs:
+
+docker-compose logs app
